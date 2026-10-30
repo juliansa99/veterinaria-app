@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:veterinaria_app/features/auth/servicio_autenticacion.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_button.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_text_field.dart';
+import 'package:veterinaria_app/features/cliente/data/repositorio_mascotas.dart';
 import 'package:veterinaria_app/features/cliente/mascota_validators.dart';
 import 'package:veterinaria_app/features/cliente/models/mascota.dart';
 
@@ -20,6 +22,7 @@ class _EstadoPaginaAltaMascota extends State<PaginaAltaMascota> {
   final _controladorObservaciones = TextEditingController();
 
   AutovalidateMode _modoAutovalidacion = AutovalidateMode.disabled;
+  bool _guardando = false;
 
   @override
   void dispose() {
@@ -31,7 +34,7 @@ class _EstadoPaginaAltaMascota extends State<PaginaAltaMascota> {
     super.dispose();
   }
 
-  void _enviarFormulario() {
+  Future<void> _enviarFormulario() async {
     if (!_claveFormulario.currentState!.validate()) {
       setState(() {
         _modoAutovalidacion = AutovalidateMode.onUserInteraction;
@@ -47,7 +50,21 @@ class _EstadoPaginaAltaMascota extends State<PaginaAltaMascota> {
       observaciones: _controladorObservaciones.text.trim(),
     );
 
-    Navigator.of(context).pop(mascota);
+    setState(() => _guardando = true);
+    try {
+      await RepositorioMascotas.agregar(mascota);
+      if (!mounted) return;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(ServicioAutenticacion.mensajeDeError(error))),
+        );
+    } finally {
+      if (mounted) setState(() => _guardando = false);
+    }
   }
 
   @override
@@ -119,6 +136,7 @@ class _EstadoPaginaAltaMascota extends State<PaginaAltaMascota> {
                     const SizedBox(height: 24),
                     BotonAutenticacion(
                       etiqueta: 'Guardar',
+                      cargando: _guardando,
                       onPressed: _enviarFormulario,
                     ),
                   ],
