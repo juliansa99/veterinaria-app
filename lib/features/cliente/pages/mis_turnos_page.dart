@@ -4,6 +4,7 @@ import 'package:veterinaria_app/features/auth/servicio_autenticacion.dart';
 import 'package:veterinaria_app/features/cliente/data/repositorio_turnos.dart';
 import 'package:veterinaria_app/features/cliente/models/turno.dart';
 import 'package:veterinaria_app/features/cliente/widgets/tarjeta_turno.dart';
+import 'package:veterinaria_app/features/cliente/pages/historial_clinico_page.dart';
 
 class PaginaMisTurnos extends StatefulWidget {
   const PaginaMisTurnos({super.key});
@@ -62,9 +63,20 @@ class _EstadoPaginaMisTurnos extends State<PaginaMisTurnos> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
+               appBar: AppBar(
           title: const Text('Mis Turnos'),
           centerTitle: true,
+          actions: [
+            IconButton(
+              tooltip: 'Historial clínico',
+              icon: const Icon(Icons.medical_information_outlined),
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (context) => const PaginaHistorialClinico(),
+                ),
+              ),
+            ),
+          ],
           backgroundColor: Colors.transparent,
           scrolledUnderElevation: 0,
           bottom: const TabBar(
