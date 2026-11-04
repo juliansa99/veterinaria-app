@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:veterinaria_app/features/auth/auth_validators.dart';
 import 'package:veterinaria_app/features/auth/pages/register_page.dart';
+import 'package:veterinaria_app/features/auth/servicio_autenticacion.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_button.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_page_shell.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_text_field.dart';
@@ -19,6 +20,7 @@ class _EstadoPaginaLogin extends State<PaginaLogin> {
   final _controladorContrasena = TextEditingController();
 
   bool _ocultarContrasena = true;
+  bool _cargando = false;
   AutovalidateMode _modoAutovalidacion = AutovalidateMode.disabled;
 
   @override
@@ -28,7 +30,13 @@ class _EstadoPaginaLogin extends State<PaginaLogin> {
     super.dispose();
   }
 
-  void _enviarFormulario() {
+  void _mostrarMensaje(String mensaje) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(mensaje)));
+  }
+
+  Future<void> _enviarFormulario() async {
     _controladorEmail.text = _controladorEmail.text.trim();
 
     if (!_claveFormulario.currentState!.validate()) {
@@ -38,10 +46,40 @@ class _EstadoPaginaLogin extends State<PaginaLogin> {
       return;
     }
 
-    // Punto de reemplazo futuro: iniciar sesión contra MockAPI.
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute<void>(builder: (context) => const PaginaHomeCliente()),
-    );
+    setState(() => _cargando = true);
+    try {
+      await ServicioAutenticacion.iniciarSesion(
+        email: _controladorEmail.text,
+        contrasena: _controladorContrasena.text,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute<void>(
+          builder: (context) => const PaginaHomeCliente(),
+        ),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      _mostrarMensaje(ServicioAutenticacion.mensajeDeError(error));
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
+  }
+
+  Future<void> _recuperarContrasena() async {
+    final email = _controladorEmail.text.trim();
+    if (ValidadoresAutenticacion.validarEmail(email) != null) {
+      _mostrarMensaje('Escribí tu email arriba para recuperar la contraseña');
+      return;
+    }
+    try {
+      await ServicioAutenticacion.recuperarContrasena(email);
+      if (!mounted) return;
+      _mostrarMensaje('Te enviamos un mail para restablecer la contraseña');
+    } catch (error) {
+      if (!mounted) return;
+      _mostrarMensaje(ServicioAutenticacion.mensajeDeError(error));
+    }
   }
 
   void _abrirRegistro() {
@@ -86,9 +124,7 @@ class _EstadoPaginaLogin extends State<PaginaLogin> {
               validator: ValidadoresAutenticacion.validarContrasena,
             ),
             TextButton(
-              onPressed: () {
-                // La recuperación de contraseña se implementará más adelante.
-              },
+              onPressed: _recuperarContrasena,
               style: TextButton.styleFrom(
                 alignment: Alignment.centerRight,
                 padding: const EdgeInsets.symmetric(vertical: 8),
@@ -103,6 +139,7 @@ class _EstadoPaginaLogin extends State<PaginaLogin> {
             const SizedBox(height: 8),
             BotonAutenticacion(
               etiqueta: 'Ingresar',
+              cargando: _cargando,
               onPressed: _enviarFormulario,
             ),
           ],

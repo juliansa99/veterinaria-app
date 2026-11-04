@@ -1,17 +1,36 @@
 import 'package:flutter/material.dart';
-import 'package:veterinaria_app/features/cliente/data/datos_ejemplo.dart';
+import 'package:veterinaria_app/features/auth/pages/login_page.dart';
+import 'package:veterinaria_app/features/auth/servicio_autenticacion.dart';
+import 'package:veterinaria_app/features/cliente/data/repositorio_turnos.dart';
+import 'package:veterinaria_app/features/cliente/models/turno.dart';
 import 'package:veterinaria_app/features/cliente/pages/mis_mascotas_page.dart';
 import 'package:veterinaria_app/features/cliente/pages/mis_turnos_page.dart';
 import 'package:veterinaria_app/features/cliente/pages/reservar_turno_veterinario_page.dart';
 import 'package:veterinaria_app/features/cliente/widgets/boton_acceso_rapido.dart';
 import 'package:veterinaria_app/features/cliente/widgets/tarjeta_turno.dart';
 
-class PaginaHomeCliente extends StatelessWidget {
+class PaginaHomeCliente extends StatefulWidget {
   const PaginaHomeCliente({super.key});
+
+  @override
+  State<PaginaHomeCliente> createState() => _EstadoPaginaHomeCliente();
+}
+
+class _EstadoPaginaHomeCliente extends State<PaginaHomeCliente> {
+  late final Stream<List<Turno>> _turnos = RepositorioTurnos.misTurnos();
 
   void _abrirPagina(BuildContext context, Widget pagina) {
     Navigator.of(context)
         .push(MaterialPageRoute<void>(builder: (context) => pagina));
+  }
+
+  Future<void> _cerrarSesion(BuildContext context) async {
+    await ServicioAutenticacion.cerrarSesion();
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute<void>(builder: (context) => const PaginaLogin()),
+      (ruta) => false,
+    );
   }
 
   @override
@@ -24,6 +43,13 @@ class PaginaHomeCliente extends StatelessWidget {
         centerTitle: true,
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Cerrar sesión',
+            icon: const Icon(Icons.logout),
+            onPressed: () => _cerrarSesion(context),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Center(
@@ -70,10 +96,32 @@ class PaginaHomeCliente extends StatelessWidget {
                 const SizedBox(height: 28),
                 Text('Próximos turnos', style: tema.titleLarge),
                 const SizedBox(height: 12),
-                for (final turno in turnosProximosEjemplo) ...[
-                  TarjetaTurno(turno: turno),
-                  const SizedBox(height: 12),
-                ],
+                StreamBuilder<List<Turno>>(
+                  stream: _turnos,
+                  builder: (context, estado) {
+                    if (!estado.hasData) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    final proximos = estado.data!
+                        .where((turno) => turno.esProximo)
+                        .toList()
+                      ..sort((a, b) => a.fecha!.compareTo(b.fecha!));
+                    if (proximos.isEmpty) {
+                      return Text(
+                        'No tenés turnos próximos',
+                        style: tema.bodyMedium,
+                      );
+                    }
+                    return Column(
+                      children: [
+                        for (final turno in proximos.take(3)) ...[
+                          TarjetaTurno(turno: turno),
+                          const SizedBox(height: 12),
+                        ],
+                      ],
+                    );
+                  },
+                ),
               ],
             ),
           ),

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:veterinaria_app/features/auth/auth_validators.dart';
+import 'package:veterinaria_app/features/auth/servicio_autenticacion.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_button.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_page_shell.dart';
 import 'package:veterinaria_app/features/auth/widgets/auth_text_field.dart';
+import 'package:veterinaria_app/features/cliente/pages/home_cliente_page.dart';
 
 class PaginaRegistro extends StatefulWidget {
   const PaginaRegistro({super.key});
@@ -20,6 +22,7 @@ class _EstadoPaginaRegistro extends State<PaginaRegistro> {
 
   bool _ocultarContrasena = true;
   bool _ocultarConfirmarContrasena = true;
+  bool _cargando = false;
   AutovalidateMode _modoAutovalidacion = AutovalidateMode.disabled;
 
   @override
@@ -31,7 +34,7 @@ class _EstadoPaginaRegistro extends State<PaginaRegistro> {
     super.dispose();
   }
 
-  void _enviarFormulario() {
+  Future<void> _enviarFormulario() async {
     _controladorNombre.text = _controladorNombre.text.trim();
     _controladorEmail.text = _controladorEmail.text.trim();
 
@@ -42,12 +45,30 @@ class _EstadoPaginaRegistro extends State<PaginaRegistro> {
       return;
     }
 
-    // Punto de reemplazo futuro: crear el usuario en MockAPI.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Cuenta creada correctamente')),
+    setState(() => _cargando = true);
+    try {
+      await ServicioAutenticacion.registrar(
+        nombre: _controladorNombre.text,
+        email: _controladorEmail.text,
+        contrasena: _controladorContrasena.text,
       );
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute<void>(
+          builder: (context) => const PaginaHomeCliente(),
+        ),
+        (ruta) => false,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text(ServicioAutenticacion.mensajeDeError(error))),
+        );
+    } finally {
+      if (mounted) setState(() => _cargando = false);
+    }
   }
 
   void _volverAlLogin() {
@@ -120,6 +141,7 @@ class _EstadoPaginaRegistro extends State<PaginaRegistro> {
             const SizedBox(height: 24),
             BotonAutenticacion(
               etiqueta: 'Registrarme',
+              cargando: _cargando,
               onPressed: _enviarFormulario,
             ),
           ],

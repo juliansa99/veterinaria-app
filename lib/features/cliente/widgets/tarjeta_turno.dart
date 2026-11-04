@@ -3,9 +3,12 @@ import 'package:veterinaria_app/app/theme/app_theme.dart';
 import 'package:veterinaria_app/features/cliente/models/turno.dart';
 
 class TarjetaTurno extends StatelessWidget {
-  const TarjetaTurno({super.key, required this.turno});
+  const TarjetaTurno({super.key, required this.turno, this.onCancelar});
 
   final Turno turno;
+
+  /// Si se indica, la tarjeta muestra el botón "Cancelar".
+  final VoidCallback? onCancelar;
 
   @override
   Widget build(BuildContext context) {
@@ -40,9 +43,25 @@ class TarjetaTurno extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(turno.veterinario, style: tema.bodyMedium),
                   Text(turno.fechaHora, style: tema.bodyMedium),
+                  if (turno.estaCancelado)
+                    Text(
+                      'Cancelado',
+                      style: tema.bodyMedium?.copyWith(
+                        color: ColoresAplicacion.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                 ],
               ),
             ),
+            if (onCancelar != null)
+              TextButton(
+                style: TextButton.styleFrom(
+                  foregroundColor: ColoresAplicacion.error,
+                ),
+                onPressed: onCancelar,
+                child: const Text('Cancelar'),
+              ),
           ],
         ),
       ),
